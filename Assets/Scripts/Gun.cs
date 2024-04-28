@@ -1,0 +1,90 @@
+using System.Collections;
+using System.Collections.Generic;
+using NaughtyAttributes;
+using UnityEngine;
+
+public class Gun : MonoBehaviour
+{
+    //[SerializeField] private ParticleSystem shootingSystem;
+    [SerializeField] private Transform bulletSpawnPoint;
+    //[SerializeField] private ParticleSystem impactParticleSystem;
+    [SerializeField] private TrailRenderer bulletTrail;
+    [SerializeField] private float shootDelay = 0.1f;
+    [SerializeField] private float speed = 100;
+    [SerializeField] private LayerMask mask;
+    [SerializeField] private bool bouncingBullets;
+    [SerializeField] private float bounceDistance = 10f;
+
+    private float lastShootTime;
+
+    [Button]
+    public void Shoot()
+    {
+        if (lastShootTime + shootDelay < Time.time)
+        {
+            //shootingSystem.Play();
+            Vector3 direction = bulletSpawnPoint.transform.forward;
+            TrailRenderer trail = Instantiate(bulletTrail, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
+
+            if (Physics.Raycast(bulletSpawnPoint.position, direction, out RaycastHit hit, float.MaxValue, mask))
+            {
+                StartCoroutine(SpawnTrail(trail, hit.point, hit.normal, bounceDistance, true));
+            }
+            else
+            {
+                StartCoroutine(SpawnTrail(trail, direction * 100, Vector3.zero, bounceDistance, false));
+            }
+
+            lastShootTime = Time.time;
+        }
+    }
+
+    private IEnumerator SpawnTrail(TrailRenderer trail, Vector3 hitPoint, Vector3 hitNormal, float bounceDistance,
+        bool madeImpact)
+    {
+        Vector3 startPosition = trail.transform.position;
+        Vector3 direction = (hitPoint - startPosition).normalized;
+
+        float distance = Vector3.Distance(startPosition, hitPoint);
+        float startingDistance = distance;
+
+        while (distance > 0)
+        {
+            trail.transform.position = Vector3.Lerp(startPosition, hitPoint, 1 - (distance / startingDistance));
+            distance -= Time.deltaTime * speed;
+
+            yield return null;
+        }
+
+        trail.transform.position = hitPoint;
+        if (madeImpact)
+        {
+            //Instantiate(impactParticleSystem, hitPoint, Quaternion.LookRotation(hitNormal));
+
+            if (bouncingBullets && bounceDistance > 0)
+            {
+                Vector3 bounceDirection = Vector3.Reflect(direction, hitNormal);
+                if (Physics.Raycast(hitPoint, bounceDirection, out RaycastHit hit, bounceDistance, mask))
+                {
+                    yield return StartCoroutine(SpawnTrail(
+                        trail,
+                        hit.point,
+                        hit.normal,
+                        bounceDistance - Vector3.Distance(hit.point, hitPoint),
+                        true));
+                }
+                else
+                {
+                    yield return StartCoroutine(SpawnTrail(
+                        trail,
+                        hitPoint + bounceDirection * bounceDistance,
+                        Vector3.zero,
+                        0,
+                        false));
+                }
+            }
+        }
+        
+        Destroy(trail.gameObject, trail.time);
+    }
+}
