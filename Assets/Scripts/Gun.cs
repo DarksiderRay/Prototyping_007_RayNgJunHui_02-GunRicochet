@@ -2,12 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using NaughtyAttributes;
-using Oculus.Interaction.OVR.Input;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class Gun : MonoBehaviour
 {
-    //[SerializeField] private ParticleSystem shootingSystem;
+    [SerializeField] private ParticleSystem shootingSystem;
     [SerializeField] private Transform bulletSpawnPoint;
     //[SerializeField] private ParticleSystem impactParticleSystem;
     [SerializeField] private TrailRenderer bulletTrail;
@@ -17,8 +17,13 @@ public class Gun : MonoBehaviour
     [SerializeField] private bool bouncingBullets;
     [SerializeField] private float bounceDistance = 10f;
 
-    [Space] [SerializeField] private OVRInput.RawButton shootButton;
-    
+    [Header("Input")] 
+    [SerializeField] private OVRInput.RawButton shootButton;
+
+    [Header("SFX")] 
+    [SerializeField] private AudioSource sfxAudioSource;
+    [SerializeField] private AudioClip audioClip_GunShoot;
+    [SerializeField] private List<AudioClip> audioClips_Ricochet;
 
     private float lastShootTime;
 
@@ -31,9 +36,11 @@ public class Gun : MonoBehaviour
     [Button]
     public void Shoot()
     {
+        sfxAudioSource.PlayOneShot(audioClip_GunShoot);
+        
         if (lastShootTime + shootDelay < Time.time)
         {
-            //shootingSystem.Play();
+            shootingSystem.Play();
             Vector3 direction = bulletSpawnPoint.transform.forward;
             TrailRenderer trail = Instantiate(bulletTrail, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
 
@@ -79,6 +86,8 @@ public class Gun : MonoBehaviour
         if (madeImpact)
         {
             //Instantiate(impactParticleSystem, hitPoint, Quaternion.LookRotation(hitNormal));
+            
+            trail.GetComponentInChildren<AudioSource>().PlayOneShot(GetRicochetSFXClip());
 
             if (bouncingBullets && bounceDistance > 0)
             {
@@ -122,5 +131,10 @@ public class Gun : MonoBehaviour
         }
         
         Destroy(trail.gameObject, trail.time);
+    }
+
+    private AudioClip GetRicochetSFXClip()
+    {
+        return audioClips_Ricochet[Random.Range(0, audioClips_Ricochet.Count)];
     }
 }

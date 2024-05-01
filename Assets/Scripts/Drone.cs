@@ -9,6 +9,7 @@ using UnityEngine;
 public class Drone : MonoBehaviour
 {
     [SerializeField] private CFXR_Effect explosionEffect;
+    [SerializeField] private AudioSource explosionAudioSource;
 
     public delegate void OnInvokeDead();
 
@@ -25,18 +26,25 @@ public class Drone : MonoBehaviour
     {
         if (other.gameObject.CompareTag("Bullet"))
         {
-            InvokeDead();
+            StartCoroutine(InvokeDead());
         }
     }
 
     [Button]
-    private void InvokeDead()
+    private void StartInvokeDead()
+    {
+        StartCoroutine(InvokeDead());
+    }
+    
+    private IEnumerator InvokeDead()
     {
         Instantiate(explosionEffect.gameObject, transform.position, Quaternion.identity);
         onInvokeDead?.Invoke();
-        transform.DOScale(Vector3.zero, 0.25f).OnComplete(() =>
-        {
-            Destroy(gameObject);
-        });
+        //transform.DOScale(Vector3.zero, 0.1f);
+        transform.localScale = Vector3.zero;
+
+        explosionAudioSource.Play();
+        yield return new WaitUntil(() => !explosionAudioSource.isPlaying);
+        Destroy(gameObject);
     }
 }
