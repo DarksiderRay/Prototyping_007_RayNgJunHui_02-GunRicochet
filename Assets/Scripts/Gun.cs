@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using NaughtyAttributes;
+using Oculus.Interaction.OVR.Input;
 using UnityEngine;
 
 public class Gun : MonoBehaviour
@@ -15,7 +17,16 @@ public class Gun : MonoBehaviour
     [SerializeField] private bool bouncingBullets;
     [SerializeField] private float bounceDistance = 10f;
 
+    [Space] [SerializeField] private OVRInput.RawButton shootButton;
+    
+
     private float lastShootTime;
+
+    private void Update()
+    {
+        if (OVRInput.GetDown(shootButton))
+            Shoot();
+    }
 
     [Button]
     public void Shoot()
@@ -26,9 +37,17 @@ public class Gun : MonoBehaviour
             Vector3 direction = bulletSpawnPoint.transform.forward;
             TrailRenderer trail = Instantiate(bulletTrail, bulletSpawnPoint.position, bulletSpawnPoint.rotation);
 
-            if (Physics.Raycast(bulletSpawnPoint.position, direction, out RaycastHit hit, float.MaxValue, mask))
+            if (Physics.Raycast(bulletSpawnPoint.position, direction, out RaycastHit hit, float.MaxValue))
             {
-                StartCoroutine(SpawnTrail(trail, hit.point, hit.normal, bounceDistance, true));
+                if (hit.collider.gameObject.layer.Equals(LayerMask.NameToLayer("BouncableWall")))
+                {
+                    StartCoroutine(SpawnTrail(trail, hit.point, hit.normal, bounceDistance, true));
+                }
+                else
+                {
+                    StartCoroutine(SpawnTrail(trail, hit.point, hit.normal, Vector3.Distance(hit.point, bulletSpawnPoint.position), false));
+                }
+                
             }
             else
             {
@@ -64,14 +83,31 @@ public class Gun : MonoBehaviour
             if (bouncingBullets && bounceDistance > 0)
             {
                 Vector3 bounceDirection = Vector3.Reflect(direction, hitNormal);
-                if (Physics.Raycast(hitPoint, bounceDirection, out RaycastHit hit, bounceDistance, mask))
+                if (Physics.Raycast(hitPoint, bounceDirection, out RaycastHit hit, bounceDistance))
                 {
-                    yield return StartCoroutine(SpawnTrail(
-                        trail,
-                        hit.point,
-                        hit.normal,
-                        bounceDistance - Vector3.Distance(hit.point, hitPoint),
-                        true));
+                    
+                    if (hit.collider.gameObject.layer.Equals(LayerMask.NameToLayer("BouncableWall")))
+                    {
+                        yield return StartCoroutine(SpawnTrail(
+                            trail,
+                            hit.point,
+                            hit.normal,
+                            bounceDistance - Vector3.Distance(hit.point, hitPoint),
+                            true));
+                    }
+                    else
+                    {
+                        // Debug.Log("HAHA");
+                        yield return StartCoroutine(SpawnTrail(
+                            trail,
+                            hit.point,
+                            hit.normal,
+                            0,
+                            false));
+
+                        
+                    }
+                    
                 }
                 else
                 {

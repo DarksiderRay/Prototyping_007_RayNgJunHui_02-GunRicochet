@@ -26,7 +26,8 @@ public class MRUKRoomManager : MonoBehaviour
         var meshColliders = room.GetComponentsInChildren<Collider>();
         foreach (var col in meshColliders)
         {
-            col.material = meshPhysicMat;
+            //col.material = meshPhysicMat;
+            col.gameObject.layer = LayerMask.NameToLayer("BouncableWall");
         }
     }
 }
